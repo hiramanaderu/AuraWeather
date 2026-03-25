@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/hirama/code/stl/queue/output/queue8.4'
+relocations:     []
+...

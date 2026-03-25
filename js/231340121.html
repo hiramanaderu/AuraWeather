@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自定义tabBar（HTML版）</title>
+    <!-- 引入Vant CSS（模拟小程序Vant组件样式，无需安装） -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vant/weapp/dist/style/tabbar.css">
+    <style>
+        /* 1. 模拟小程序页面容器样式 */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 避免页面滚动 */
+        }
+
+        /* 2. 页面内容区域（占满除tabBar外的空间） */
+        .page-container {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            overflow-y: auto;
+        }
+        .page-info {
+            font-size: 18px;
+            margin: 50px 0;
+            color: #333;
+        }
+        .home-btn {
+            background-color: #27ae60;
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            padding: 12px 30px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .home-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* 3. 覆盖Vant默认样式（对应实验要求：选中#27ae60，未选中#999） */
+        .my-tabbar {
+            --van-tabbar-item-active-color: #27ae60; /* 选中颜色 */
+            --van-tabbar-item-color: #999; /* 未选中颜色 */
+            --van-tabbar-height: 55px; /* tabBar高度 */
+            border-top: 1px solid #eee; /* 增加上边框，优化视觉 */
+        }
+
+        /* 4. 隐藏未激活的页面（核心：通过display控制页面切换） */
+        .page {
+            display: none;
+            height: 100%;
+        }
+        .page.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 一、3个tab对应的页面内容（模拟小程序的pages） -->
+    <!-- 首页 -->
+    <div class="page page-index active" id="pageIndex">
+        <div class="page-container">
+            <h2>首页</h2>
+            <div class="page-info">当前tab选中索引：<span id="indexActive">0</span></div>
+            <button class="home-btn" onclick="goToHome()">返回首页</button>
+        </div>
+    </div>
+
+    <!-- 消息页 -->
+    <div class="page page-message" id="pageMessage">
+        <div class="page-container">
+            <h2>消息</h2>
+            <div class="page-info">当前tab选中索引：<span id="messageActive">0</span></div>
+            <button class="home-btn" onclick="goToHome()">返回首页</button>
+        </div>
+    </div>
+
+    <!-- 我的页 -->
+    <div class="page page-mine" id="pageMine">
+        <div class="page-container">
+            <h2>我的</h2>
+            <div class="page-info">当前tab选中索引：<span id="mineActive">0</span></div>
+            <button class="home-btn" onclick="goToHome()">返回首页</button>
+        </div>
+    </div>
+
+    <!-- 二、自定义tabBar（基于Vant样式，模拟小程序custom-tab-bar） -->
+    <div class="van-tabbar my-tabbar" id="customTabBar">
+        <div class="van-tabbar-item van-tabbar-item--active" data-index="0" onclick="onTabChange(0)">
+            <<i class="van-icon van-icon-home"></</i>
+            <span class="van-tabbar-item__text">首页</span>
+        </div>
+        <div class="van-tabbar-item" data-index="1" onclick="onTabChange(1)">
+            <<i class="van-icon van-icon-message-o"></</i>
+            <span class="van-tabbar-item__text">消息</span>
+        </div>
+        <div class="van-tabbar-item" data-index="2" onclick="onTabChange(2)">
+            <<i class="van-icon van-icon-user-o"></</i>
+            <span class="van-tabbar-item__text">我的</span>
+        </div>
+    </div>
+
+    <script>
+        // 1. 模拟MobX全局Store：存储tab选中索引，提供修改方法（核心全局状态）
+        const tabStore = {
+            activeIndex: 0, // 默认选中0（首页）
+            setActiveIndex: function(index) {
+                this.activeIndex = index;
+                updateAllPageState(); // 状态更新后，同步所有页面显示
+                updateTabBarStyle(); // 同步tabBar选中样式
+            }
+        };
+
+        // 2. 点击tab项：触发全局状态修改（模拟小程序onTabChange）
+        function onTabChange(index) {
+            tabStore.setActiveIndex(Number(index));
+        }
+
+        // 3. 页面“返回首页”按钮：切换到首页（模拟小程序wx.switchTab）
+        function goToHome() {
+            tabStore.setActiveIndex(0);
+        }
+
+        // 4. 同步所有页面的“选中索引”显示（模拟页面联动）
+        function updateAllPageState() {
+            const activeIndex = tabStore.activeIndex;
+            // 分别更新3个页面的索引显示
+            document.getElementById('indexActive').innerText = activeIndex;
+            document.getElementById('messageActive').innerText = activeIndex;
+            document.getElementById('mineActive').innerText = activeIndex;
+            
+            // 切换页面显示（隐藏未激活页面，显示激活页面）
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            const pageList = ['pageIndex', 'pageMessage', 'pageMine'];
+            document.getElementById(pageList[activeIndex]).classList.add('active');
+        }
+
+        // 5. 同步tabBar选中样式（高亮当前tab项，切换图标）
+        function updateTabBarStyle() {
+            const activeIndex = tabStore.activeIndex;
+            const tabItems = document.querySelectorAll('.van-tabbar-item');
+            
+            // 重置所有tab项样式和图标
+            tabItems.forEach((item, index) => {
+                item.classList.remove('van-tabbar-item--active');
+                // 切换图标：选中用“实心”图标，未选中用“空心”图标
+                const icon = item.querySelector('i');
+                const iconMap = [
+                    ['van-icon-home-o', 'van-icon-home'], // 首页图标
+                    ['van-icon-message-o', 'van-icon-message'], // 消息图标
+                    ['van-icon-user-o', 'van-icon-user'] // 我的图标
+                ];
+                icon.className = `van-icon ${index === activeIndex ? iconMap[index][1] : iconMap[index][0]}`;
+            });
+
+            // 高亮当前选中的tab项
+            tabItems[activeIndex].classList.add('van-tabbar-item--active');
+        }
+
+        // 页面加载时，初始化状态（确保首次显示正确）
+        window.onload = function() {
+            updateAllPageState();
+            updateTabBarStyle();
+        };
+    </script>
+</body>
+</html>

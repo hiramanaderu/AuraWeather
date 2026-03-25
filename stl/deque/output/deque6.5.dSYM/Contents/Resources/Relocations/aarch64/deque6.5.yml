@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/hirama/code/stl/deque/output/deque6.5'
+relocations:     []
+...
