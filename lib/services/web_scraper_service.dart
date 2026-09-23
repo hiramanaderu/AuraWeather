@@ -3,6 +3,7 @@ import 'package:html/parser.dart' show parse;
 import 'package:logger/logger.dart';
 
 import '../config/app_config.dart';
+import '../utils/weather_parsing.dart';
 import '../models/weather_model.dart';
 import '../models/city_model.dart';
 import 'api_service.dart';
@@ -168,11 +169,11 @@ class WebScraperService {
       return CurrentWeather(
         city: cityName,
         cityCode: cityName, // 使用城市名作为code
-        weather: weatherText ?? '晴',
+        weather: weatherText ?? '未知',
         weatherCode: '',
         temperature: temp,
         feelsLike: temp, // 网页可能无法获取体感温度
-        humidity: humidity ?? '50',
+        humidity: humidity ?? '',
         windDirection: wind?.split(' ').first ?? '',
         windPower: wind?.split(' ').last ?? '',
         pressure: '',
@@ -204,11 +205,12 @@ class WebScraperService {
         
         // 提取天气
         final weaElement = element.querySelector('.wea, .weather');
-        final weather = weaElement?.text.trim() ?? '晴';
+        final weather = weaElement?.text.trim() ?? '未知';
         
         // 提取温度
         final tempElement = element.querySelector('.temp, .temperature');
-        final tempText = tempElement?.text.trim() ?? '20/15';
+        final tempText = tempElement?.text.trim();
+        if (tempText == null || tempText.isEmpty) continue;
         
         // 解析温度范围
         final temps = _parseTempRange(tempText);
@@ -224,19 +226,6 @@ class WebScraperService {
         ));
       }
 
-      // 如果没找到足够的预报数据，生成默认数据
-      while (forecasts.length < 7) {
-        final index = forecasts.length;
-        forecasts.add(DailyForecast(
-          date: _getFutureDate(index),
-          dayWeather: '晴',
-          nightWeather: '晴',
-          dayTemp: 22,
-          nightTemp: 15,
-          windDirection: '',
-          windPower: '',
-        ));
-      }
     } catch (e) {
       _logger.e('解析预报失败: $e');
     }
@@ -274,15 +263,18 @@ class WebScraperService {
           return ApiResponse.error('无当前天气数据');
         }
 
+        final realTime = RegExp(r'实时[：:]\s*(-?\d+(?:\.\d+)?)').firstMatch(current['date']?.toString() ?? '');
+        if (realTime == null) return ApiResponse.error('数据源未提供实时温度');
+
         // 解析当前天气
         final currentWeather = CurrentWeather(
           city: results['currentCity'] ?? cityName,
           cityCode: cityName,
-          weather: current['weather'] ?? '晴',
+          weather: current['weather'] ?? '未知',
           weatherCode: '',
-          temperature: _extractTemperature(current['temperature'] ?? '20'),
-          feelsLike: _extractTemperature(current['temperature'] ?? '20'),
-          humidity: results['pm25']?.toString() ?? '',
+          temperature: _extractTemperature(realTime.group(1)!),
+          feelsLike: _extractTemperature(realTime.group(1)!),
+          humidity: '', // PM2.5 并非相对湿度。
           windDirection: current['wind']?.toString().split(' ').first ?? '',
           windPower: '',
           pressure: '',
@@ -296,13 +288,14 @@ class WebScraperService {
         
         for (var i = 0; i < weatherData.length && i < 7; i++) {
           final day = weatherData[i];
-          final tempRange = day['temperature']?.toString() ?? '20~15';
+          final tempRange = day['temperature']?.toString();
+          if (tempRange == null || tempRange.isEmpty) continue;
           final temps = _parseTempRange(tempRange.replaceAll('℃', '').replaceAll('°', ''));
           
           forecasts.add(DailyForecast(
-            date: day['date']?.toString().split(' ').first ?? _getFutureDate(i),
-            dayWeather: day['weather']?.toString() ?? '晴',
-            nightWeather: day['weather']?.toString() ?? '晴',
+            date: _getFutureDate(i),
+            dayWeather: day['weather']?.toString() ?? '未知',
+            nightWeather: day['weather']?.toString() ?? '未知',
             dayTemp: temps[0],
             nightTemp: temps[1],
             windDirection: day['wind']?.toString().split(' ').first ?? '',
@@ -356,34 +349,22 @@ class WebScraperService {
 
   /// 提取温度
   double _extractTemperature(String text) {
-    // 移除所有非数字字符，除了减号和小数点
-    final cleanText = text.replaceAll(RegExp(r'[^\d.-]'), '');
-    return double.tryParse(cleanText) ?? 20.0;
+    final temperature = parseWeatherTemperature(text);
+    if (temperature == null) throw const FormatException('缺少有效温度');
+    return temperature;
   }
 
-  /// 解析温度范围
+  /// 保留负号并严格解析温度区间，不使用虚构默认值。
   List<double> _parseTempRange(String text) {
-    // 处理 "20~15" 或 "20/15" 或 "20℃-15℃" 等格式
-    final temps = text
-        .replaceAll('℃', '')
-        .replaceAll('°', '')
-        .replaceAll('C', '')
-        .split(RegExp(r'[~\-/,]'))
-        .map((s) => double.tryParse(s.trim()) ?? 20.0)
-        .toList();
-
-    if (temps.length >= 2) {
-      return [temps[0], temps[1]];
-    } else if (temps.length == 1) {
-      return [temps[0], temps[0] - 5];
-    }
-    return [22.0, 15.0];
+    final range = parseWeatherTemperatureRange(text);
+    if (range == null) throw const FormatException('缺少有效温度区间');
+    return range;
   }
 
   /// 获取未来日期
   String _getFutureDate(int days) {
     final date = DateTime.now().add(Duration(days: days));
-    return '${date.month}/${date.day}';
+    return date.toIso8601String().split('T').first;
   }
 }
 
@@ -475,3 +456,4 @@ class WeatherServiceWithFallback {
     return await _scraperService.searchCity(keyword);
   }
 }
+

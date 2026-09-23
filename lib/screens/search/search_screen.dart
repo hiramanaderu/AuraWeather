@@ -53,7 +53,7 @@ class _SearchScreenState extends State<SearchScreen> {
     settings.setCurrentCity(city.name, city.code);
     
     // 加载新城市天气
-    await weather.fetchWeather(city.code, forceRefresh: true);
+    await weather.fetchWeather(city.code, cityName: city.name, forceRefresh: true);
 
     if (mounted) {
       Navigator.pop(context);
@@ -210,7 +210,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   final settings = context.read<SettingsProvider>();
                   final weather = context.read<WeatherProvider>();
                   settings.setCurrentCity(item.cityName, item.cityCode);
-                  weather.fetchWeather(item.cityCode, forceRefresh: true);
+                  weather.fetchWeather(item.cityCode, cityName: item.cityName, forceRefresh: true);
                   Navigator.pop(context);
                 },
               );
@@ -268,3 +268,4 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 }
+

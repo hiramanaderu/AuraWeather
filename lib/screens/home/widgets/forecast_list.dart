@@ -16,7 +16,7 @@ class ForecastList extends StatelessWidget {
     return Consumer2<WeatherProvider, SettingsProvider>(
       builder: (context, weather, settings, child) {
         if (weather.forecast.isEmpty) {
-          return const SizedBox.shrink();
+          return const Padding(padding: EdgeInsets.all(16), child: Text('暂无预报'));
         }
 
         return Column(
@@ -29,7 +29,7 @@ class ForecastList extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '未来7天',
+                    '天气预报（${weather.forecast.length}天）',
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
@@ -170,3 +170,4 @@ class ForecastList extends StatelessWidget {
     );
   }
 }
+

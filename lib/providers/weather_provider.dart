@@ -30,7 +30,7 @@ class WeatherProvider extends ChangeNotifier {
   bool get hasData => _weatherData != null;
 
   /// 获取天气（优先缓存）
-  Future<void> fetchWeather(String cityCode, {bool forceRefresh = false}) async {
+  Future<void> fetchWeather(String cityCode, {bool forceRefresh = false, required String cityName}) async {
     if (!forceRefresh) {
       // 尝试从缓存获取
       final cached = await _db.getCachedWeather(cityCode);
@@ -42,18 +42,18 @@ class WeatherProvider extends ChangeNotifier {
       }
     }
 
-    await _fetchFromNetwork(cityCode);
+    await _fetchFromNetwork(cityCode, cityName);
   }
 
   /// 从网络获取天气（支持API和网页爬取回退）
-  Future<void> _fetchFromNetwork(String cityCode) async {
+  Future<void> _fetchFromNetwork(String cityCode, String cityName) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       // 首先尝试使用fallback服务（优先API，失败自动回退到网页爬取）
-      final response = await _fallbackService.getWeather(cityCode, cityCode);
+      final response = await _fallbackService.getWeather(cityCode, cityName);
 
       if (response.success && response.data != null) {
         _weatherData = response.data;
@@ -112,13 +112,13 @@ class WeatherProvider extends ChangeNotifier {
   }
 
   /// 刷新天气
-  Future<void> refreshWeather(String cityCode) async {
-    await _fetchFromNetwork(cityCode);
+  Future<void> refreshWeather(String cityCode, {required String cityName}) async {
+    await _fetchFromNetwork(cityCode, cityName);
   }
 
   /// 获取指定日期的预报
   DailyForecast? getForecastForDay(int dayIndex) {
-    if (_weatherData == null || dayIndex >= _weatherData!.forecast.length) {
+    if (_weatherData == null || dayIndex < 0 || dayIndex >= _weatherData!.forecast.length) {
       return null;
     }
     return _weatherData!.forecast[dayIndex];
@@ -133,7 +133,7 @@ class WeatherProvider extends ChangeNotifier {
 
   /// 获取温度范围描述
   String getTemperatureRange() {
-    if (_weatherData == null) return '';
+    if (_weatherData == null || _weatherData!.forecast.isEmpty) return '暂无预报';
     
     final temps = _weatherData!.forecast.expand((f) => [f.dayTemp, f.nightTemp]).toList();
     final minTemp = temps.reduce((a, b) => a < b ? a : b);
@@ -176,8 +176,8 @@ class WeatherProvider extends ChangeNotifier {
     
     // 解析风力等级
     try {
-      final level = int.parse(windPower.replaceAll(RegExp(r'[^0-9]'), ''));
-      return level >= 6;
+      final levels = RegExp(r'\d+').allMatches(windPower);
+      return levels.any((match) => int.parse(match.group(0)!) >= 6);
     } catch (e) {
       return false;
     }
@@ -189,3 +189,4 @@ class WeatherProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+

@@ -56,14 +56,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  assets:
-    - assets/images/
-    
-  fonts:
-    - family: NotoSansSC
-      fonts:
-        - asset: assets/fonts/NotoSansSC-Regular.otf
-        - asset: assets/fonts/NotoSansSC-Bold.otf
-          weight: 700
-        - asset: assets/fonts/NotoSansSC-Light.otf
-          weight: 300
+  # 使用系统字体；仅在提交资源文件后声明 assets / fonts。
