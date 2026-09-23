@@ -192,7 +192,7 @@ class FavoritesScreen extends StatelessWidget {
     final weather = context.read<WeatherProvider>();
 
     settings.setCurrentCity(city.name, city.code);
-    weather.fetchWeather(city.code, forceRefresh: true);
+    weather.fetchWeather(city.code, cityName: city.name, forceRefresh: true);
 
     // 返回首页
     ScaffoldMessenger.of(context).showSnackBar(
@@ -258,3 +258,4 @@ class FavoritesScreen extends StatelessWidget {
     );
   }
 }
+

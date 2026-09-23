@@ -53,6 +53,12 @@ class AIProvider extends ChangeNotifier {
     int? dayIndex, // null表示今天，0-6表示未来7天
     String? provider,
   }) async {
+    if (dayIndex != null && (dayIndex < 0 || dayIndex >= weatherData.forecast.length)) {
+      _currentSuggestion = null;
+      _error = '该日期暂无预报，无法生成建议';
+      notifyListeners();
+      return;
+    }
     final date = dayIndex != null 
         ? _getFutureDate(dayIndex)
         : DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -200,6 +206,7 @@ class AIProvider extends ChangeNotifier {
 
     return '''
 请根据以下天气数据，为用户提供出行和穿搭建议。
+缺失数据必须明确说明未知，不得编造降雨概率、时段或官方预警。
 
 【城市】$city
 【出行场景】$scene
@@ -272,14 +279,14 @@ $weekForecast
         } else if (line.contains('预警：')) {
           final alertStr = line.split('：').skip(1).join('：').trim();
           if (alertStr.isNotEmpty && alertStr != '无') {
-            alerts = alertStr.split(/[,，、]/).where((s) => s.isNotEmpty).toList();
+            alerts = alertStr.split(RegExp(r'[,，、]')).where((s) => s.isNotEmpty).toList();
           }
         }
       }
     }
 
     return WeatherSummary(
-      summary: summary.isNotEmpty ? summary : '天气适宜出行',
+      summary: summary.isNotEmpty ? summary : '暂无有效天气总结',
       trend: trend,
       rainForecast: rainForecast,
       windForecast: windForecast,
@@ -315,10 +322,10 @@ $weekForecast
           transport = line.split('：').skip(1).join('：').trim();
         } else if (line.contains('必备物品：')) {
           final items = line.split('：').skip(1).join('：').trim();
-          essentials = items.split(/[,，、]/).where((s) => s.isNotEmpty).toList();
+          essentials = items.split(RegExp(r'[,，、]')).where((s) => s.isNotEmpty).toList();
         } else if (line.contains('注意事项：')) {
           final items = line.split('：').skip(1).join('：').trim();
-          notices = items.split(/[,，、]/).where((s) => s.isNotEmpty).toList();
+          notices = items.split(RegExp(r'[,，、]')).where((s) => s.isNotEmpty).toList();
         } else if (line.contains('总体建议：')) {
           overallAdvice = line.split('：').skip(1).join('：').trim();
         }
@@ -361,7 +368,7 @@ $weekForecast
           shoes = line.split('：').skip(1).join('：').trim();
         } else if (line.contains('配饰：')) {
           final items = line.split('：').skip(1).join('：').trim();
-          accessories = items.split(/[,，、]/).where((s) => s.isNotEmpty).toList();
+          accessories = items.split(RegExp(r'[,，、]')).where((s) => s.isNotEmpty).toList();
         } else if (line.contains('风格：')) {
           styleDesc = line.split('：').skip(1).join('：').trim();
         } else if (line.contains('建议：')) {
@@ -414,3 +421,4 @@ $weekForecast
     return '无';
   }
 }
+

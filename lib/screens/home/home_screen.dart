@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await city.loadFavoriteCities();
     
     // 加载天气数据
-    await weather.fetchWeather(settings.currentCityCode);
+    await weather.fetchWeather(settings.currentCityCode, cityName: settings.currentCity);
     
     // 生成AI建议
     if (weather.hasData) {
@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final settings = context.read<SettingsProvider>();
     final weather = context.read<WeatherProvider>();
 
-    await weather.refreshWeather(settings.currentCityCode);
+    await weather.refreshWeather(settings.currentCityCode, cityName: settings.currentCity);
     
     if (weather.error == null) {
       await _generateAISuggestion();
@@ -232,3 +232,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
